@@ -42,7 +42,7 @@ func exclusiveScopeImpl<T>(executeClosure: (() -> T) -> T, fn: () -> T): T
 private class ExclusiveScope<T> {
     var result: Result<T> = unsafe { zeroValue<Result<T>>() }
     func run(fn: () -> T): Unit {
-        exclusiveScopeImpl(Future<Unit>.executeClosure) {
+        /*exclusiveScopeImpl(Future<Unit>.executeClosure) {
             try {
                 result = Val(fn())
             } catch (e: Exception) {
@@ -50,7 +50,7 @@ private class ExclusiveScope<T> {
             } catch (e: Error) {
                 result = Err(e)
             }
-        }
+        }*/
     }
 }
 
