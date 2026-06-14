@@ -386,7 +386,7 @@ func createFuncParam(param: Option<NodeFormat_FuncParam>, index: Int64, length: 
     var astKind = pm.GetNodeBase().getOrThrow().GetAstKind()
     if (astKind == "macro_expand_param") {
         let annos: ArrayList<Annotation> = ArrayList<Annotation>()
- 
+
         let declBase = pm.GetBase().getOrThrow().GetBase().getOrThrow()
 
         for (anno in declBase.GetAnnotations()) {
@@ -453,6 +453,15 @@ func createFuncParam(param: Option<NodeFormat_FuncParam>, index: Int64, length: 
     return FuncParam(declNode, not, colon, ty, assign_, expr, comma, isMemberParam)
 }
 
+func generateFuncParamsFromList(paramList: NodeFormat_FuncParamList): ArrayList<FuncParam> {
+    var params = paramList.GetParams()
+    var funcParams = ArrayList<FuncParam>()
+    for (i in 0..params.size) {
+        funcParams.add(createFuncParam(params[i], i, params.size))
+    }
+    return funcParams
+}
+
 func generateFuncParams(funcBody: NodeFormat_FuncBody): ArrayList<FuncParam> {
     var params = match (funcBody.GetParamList()) {
         case Some(v) => v.GetParams()
@@ -470,8 +479,8 @@ func generateCommonFuncDecl(funcDecl: Option<NodeFormat_FuncDecl>, declNode: Dec
         case Some(v) => v
         case None => throw ParseASTException()
     }
-    var (funcParams, colon, ty, block, lParen, rParen) = createFuncBody(fd.GetFuncBody())
-    var funcDeclNode = FuncDecl(declNode, lParen, funcParams, rParen, colon, ty, block)
+    var (funcParams, colon, ty, block, lParen, rParen, implicitParams, usingPos) = createFuncBody(fd.GetFuncBody())
+    var funcDeclNode = FuncDecl(declNode, lParen, funcParams, rParen, colon, ty, block, implicitParams, usingPos)
     var fb = match (fd.GetFuncBody()) {
         case Some(v) => v
         case None => NodeFormat_FuncBody(Array<UInt8>(0, repeat: 0), 0)
@@ -507,6 +516,15 @@ func createFuncBody(funcBody: Option<NodeFormat_FuncBody>) {
     var paramList = fb.GetParamList().getOrThrow()
     var lParen = Token(TokenKind.LPAREN).addPosition(paramList.GetLeftParenPos())
     var rParen = Token(TokenKind.RPAREN).addPosition(paramList.GetRightParenPos())
+    // Parse implicit param list and using pos
+    var implicitParams: ArrayList<FuncParam> = match (fb.GetImplicitParamList()) {
+        case Some(implParamList) => generateFuncParamsFromList(implParamList)
+        case None => ArrayList<FuncParam>()
+    }
+    var usingPos = Token()
+    if (isValidPosition(fb.GetUsingPos())) {
+        usingPos = Token().addPosition(fb.GetUsingPos())
+    }
     // create function block
     return match (fb.GetBody()) {
         case Some(blockNode) =>
@@ -527,8 +545,8 @@ func createFuncBody(funcBody: Option<NodeFormat_FuncBody>) {
                 unsafe_ = Token(TokenKind.UNSAFE).addPosition(blockNode.GetUnsafePos())
             }
             var block = Block(lCurl, nodes, rCurl, unsafe_)
-            (funcParams, colon, ty, block, lParen, rParen)
-        case None => (funcParams, colon, ty, Block(), lParen, rParen)
+            (funcParams, colon, ty, block, lParen, rParen, implicitParams, usingPos)
+        case None => (funcParams, colon, ty, Block(), lParen, rParen, implicitParams, usingPos)
     }
 }
 
@@ -537,7 +555,7 @@ func createMainDecl(decl: NodeFormat_Decl, declNode: Decl): MainDecl {
         case Some(v) => v
         case None => throw ParseASTException()
     }
-    var (funcParams, colon, ty, block, lParen, rParen) = createFuncBody(md.GetFuncBody())
+    var (funcParams, colon, ty, block, lParen, rParen, _, _) = createFuncBody(md.GetFuncBody())
     return MainDecl(declNode, lParen, funcParams, rParen, colon, ty, block)
 }
 
@@ -546,7 +564,7 @@ func createMacroDecl(decl: NodeFormat_Decl, declNode: Decl): MacroDecl {
         case Some(v) => v
         case None => throw ParseASTException()
     }
-    var (funcParams, colon, ty, block, lParen, rParen) = createFuncBody(mod.GetFuncBody())
+    var (funcParams, colon, ty, block, lParen, rParen, _, _) = createFuncBody(mod.GetFuncBody())
     return MacroDecl(declNode, lParen, funcParams, rParen, colon, ty, block)
 }
 
@@ -555,8 +573,8 @@ func createPrimaryCtorDecl(decl: NodeFormat_Decl, declNode: Decl): PrimaryCtorDe
         case Some(v) => v
         case None => throw ParseASTException()
     }
-    var (funcParams, _, _, block, lParen, rParen) = createFuncBody(pcd.GetFuncBody())
-    return PrimaryCtorDecl(declNode, lParen, funcParams, rParen, block)
+    var (funcParams, _, _, block, lParen, rParen, implicitParams, usingPos) = createFuncBody(pcd.GetFuncBody())
+    return PrimaryCtorDecl(declNode, lParen, funcParams, rParen, block, implicitParams, usingPos)
 }
 
 func createVarDeclNode(decl: Option<NodeFormat_VarDecl>): VarDecl {
@@ -692,7 +710,7 @@ func createTypeAliasDecl(decl: NodeFormat_Decl, declBase: NodeFormat_DeclBase) {
 
 func createMacroExpandDecl(decl: NodeFormat_Decl) {
     var annos: ArrayList<Annotation> = ArrayList<Annotation>()
- 
+
     var declBase = decl.GetBase().getOrThrow()
     for (anno in declBase.GetAnnotations()) {
        annos.add(createAnnotation(anno))

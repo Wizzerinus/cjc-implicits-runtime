@@ -53,6 +53,7 @@ table Constraint {
   end:Position;
   type:uint32; // type of corresponding typeParameter
   uppers:[uint32]; // UpperBounds
+  isImplicitlyIntroduced:bool = false;
 }
 
 table Generic{
@@ -71,6 +72,7 @@ table FuncBody {
   body:uint32; // index of body expr
   always:bool;
   captureKind:uint8;
+  implicitParamList:FuncParamList;
 }
 
 struct DeclHash {
@@ -580,6 +582,7 @@ table FuncTyInfo {
   retType:uint32; // Func return type
   isC:bool;       // CFunc or @C func type.
   hasVariableLenArg:bool;
+  implicitTypes:[uint32];
 }
 table CompositeTyInfo {
   declPtr:FullId;

@@ -226,7 +226,7 @@ public open class Tokens <: ToString & Iterable<Token> & ToBytes {
     /** Convert Tokens to String. */
     public func toString(): String {
         // This API is just for pretty printing. Do not use this for production code.
-        // For example, prviously if we have a MULTILINE_RAW_STRING Token:  #"hello\123"# 
+        // For example, prviously if we have a MULTILINE_RAW_STRING Token:  #"hello\123"#
         // When we toSting that Token, we get: "hello\123", which is wrong, and will cause
         // a internal compiler error when lexing. I have fixed that in tokenToString function,
         // but still, be careful when you use this API.

@@ -62,6 +62,8 @@ public abstract class Visitor {
 
     protected open func visit(_: SynchronizedExpr): Unit {}
 
+    protected open func visit(_: ImplicitWithExpr): Unit {}
+
     protected open func visit(_: TrailingClosureExpr): Unit {}
 
     protected open func visit(_: TypeConvExpr): Unit {}
@@ -138,6 +140,8 @@ public abstract class Visitor {
 
     protected open func visit(_: FuncType): Unit {}
 
+    protected open func visit(_: FuncTypeUsing): Unit {}
+
     protected open func visit(_: ThisType): Unit {}
 
     protected open func visit(_: ParenType): Unit {}
@@ -193,7 +197,7 @@ public abstract class Visitor {
     protected open func visit(_: Body): Unit {}
 
     protected open func visit(_: PerformExpr): Unit {}
-    
+
     protected open func visit(_: ResumeExpr): Unit {}
 
     protected open func visit(_: CommandTypePattern): Unit {}
@@ -208,4 +212,3 @@ public abstract class Visitor {
 
     protected open func visit(_: MacroExpandParam): Unit {}
 }
-

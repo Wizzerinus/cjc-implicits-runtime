@@ -719,9 +719,100 @@ public class PrefixType <: TypeNode {
     }
 }
 
+public class FuncTypeUsing {
+    init(usingPos: Token, lParen: Token, paramTypes: ArrayList<TypeNode>, commas: Tokens, rParen: Token) {
+        this.usingPos_ = usingPos
+        this.lParen_ = lParen
+        this.paramTypes_ = paramTypes
+        this.commas_ = commas
+        this.rParen_ = rParen
+    }
+    public init() {}
+    private var usingPos_: Token = Token()
+    private var lParen_: Token = Token(TokenKind.LPAREN)
+    private var paramTypes_: ArrayList<TypeNode> = ArrayList<TypeNode>()
+    private var commas_: Tokens = Tokens()
+    private var rParen_: Token = Token(TokenKind.RPAREN)
+    public mut prop usingPos: Token {
+        get() {
+            usingPos_
+        }
+        set(v) {
+            usingPos_ = v
+        }
+    }
+    public mut prop lParen: Token {
+        get() {
+            lParen_
+        }
+        set(v) {
+            checkTokenType(v, LPAREN)
+            lParen_ = v
+        }
+    }
+    public mut prop paramTypes: ArrayList<TypeNode> {
+        get() {
+            paramTypes_
+        }
+        set(v) {
+            paramTypes_ = v
+        }
+    }
+    public mut prop commas: Tokens {
+        get() {
+            commas_
+        }
+        set(v) {
+            checkTokensType(v, COMMA)
+            commas_ = v
+        }
+    }
+    public mut prop rParen: Token {
+        get() {
+            rParen_
+        }
+        set(v) {
+            checkTokenType(v, RPAREN)
+            rParen_ = v
+        }
+    }
+    public func toTokens(): Tokens {
+        var ret = Tokens().append(usingPos_).append(lParen_)
+        if (!paramTypes_.isEmpty()) {
+            for (i in 0..paramTypes_.size - 1) {
+                let comma = commas_.tryGet(i) ?? Token(TokenKind.COMMA)
+                ret.append(paramTypes_[i].toTokens()).append(comma)
+            }
+            ret.append(paramTypes_[paramTypes_.size - 1].toTokens())
+        }
+        ret.append(rParen_)
+        ret
+    }
+
+    public func traverse(v: Visitor): Unit {
+        v.visit(this)
+        for (ty in paramTypes_) {
+            ty.traverse(v)
+        }
+        return
+    }
+
+    protected func dump(indent: UInt16): String {
+        var ret: String = "FuncTypeUsing {\n"
+        var currentIndent = indent + 1
+        for (i in 0..paramTypes_.size) {
+            ret += getIndent(currentIndent) + "-paramTypes: ${i}, "
+            ret += paramTypes_[i].dump(currentIndent)
+        }
+        ret += getIndent(indent) + "}\n"
+        ret
+    }
+}
+
 public class FuncType <: TypeNode {
     init(typeParameterName: Token, colon: Token, keyword: Token, lParen: Token, types: ArrayList<TypeNode>,
-        commas: Tokens, rParen: Token, arrow: Token, returnType: TypeNode) {
+        commas: Tokens, rParen: Token, arrow: Token, returnType: TypeNode,
+        usingType: Option<FuncTypeUsing>) {
         super(typeParameterName, colon)
         this.keyword_ = keyword
         this.lParen_ = lParen
@@ -730,6 +821,7 @@ public class FuncType <: TypeNode {
         this.rParen_ = rParen
         this.arrow_ = arrow
         this.retTy_ = returnType
+        this.usingType_ = usingType
     }
     public init(inputs: Tokens) {
         try {
@@ -745,6 +837,7 @@ public class FuncType <: TypeNode {
                     this.rParen_ = v.rParen_
                     this.arrow_ = v.arrow_
                     this.retTy_ = v.retTy_
+                    this.usingType_ = v.usingType_
                 case None => throw ASTException("Cannot construct the 'FuncType' node.")
             }
         } catch (e: ParseASTException) {
@@ -763,6 +856,7 @@ public class FuncType <: TypeNode {
     private var rParen_: Token = Token(TokenKind.RPAREN)
     private var arrow_: Token = Token(TokenKind.ARROW)
     private var retTy_: TypeNode = TypeNode()
+    private var usingType_: Option<FuncTypeUsing> = None<FuncTypeUsing>
     public mut prop keyword: Token {
         get() {
             keyword_
@@ -823,6 +917,14 @@ public class FuncType <: TypeNode {
             retTy_ = v
         }
     }
+    public mut prop usingType: Option<FuncTypeUsing> {
+        get() {
+            usingType_
+        }
+        set(v) {
+            usingType_ = v
+        }
+    }
     public func toTokens(): Tokens {
         var ret = super.toTokens()
 
@@ -830,6 +932,10 @@ public class FuncType <: TypeNode {
             ret.append(keyword_)
         }
 
+        match (usingType_) {
+            case Some(ut) => ret.append(ut.toTokens())
+            case None => ()
+        }
         ret.append(lParen_)
         if (!types_.isEmpty()) {
             for (i in 0..types_.size - 1) {
@@ -853,6 +959,10 @@ public class FuncType <: TypeNode {
             ty.traverse(v)
         }
         retTy_.traverse(v)
+        match (usingType_) {
+            case Some(ut) => ut.traverse(v)
+            case None => ()
+        }
         return
     }
 
@@ -864,6 +974,12 @@ public class FuncType <: TypeNode {
         }
         ret += super.dump(currentIndent)
         ret += getTokenIndent("-keyword", keyword_, currentIndent)
+        match (usingType_) {
+            case Some(ut) =>
+                ret += getIndent(currentIndent) + "-usingType: "
+                ret += ut.dump(currentIndent)
+            case None => ()
+        }
         for (i in 0..types_.size) {
             ret += getIndent(currentIndent) + "-types: ${i}, "
             ret += types_[i].dump(currentIndent)

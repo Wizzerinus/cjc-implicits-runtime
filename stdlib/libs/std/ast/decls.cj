@@ -840,11 +840,13 @@ public class FuncDecl <: Decl {
                 this.block_ = v.block_
                 this.overloadedOperators_ = v.overloadedOperators_
                 this.isEnumConstruct = v.isEnumConstruct
+                this.implicitParams_ = v.implicitParams_
+                this.usingPos_ = v.usingPos_
             case None => throw ASTException("Cannot construct the 'FuncDecl' node.")
         }
     }
     init(decl: Decl, lParen: Token, funcParams: ArrayList<FuncParam>, rParen: Token, colon: Token, ty: Option<TypeNode>,
-        block: Block) {
+        block: Block, implicitParams: ArrayList<FuncParam>, usingPos: Token) {
         super(decl)
         this.lParen_ = lParen
         this.params_ = funcParams
@@ -852,6 +854,8 @@ public class FuncDecl <: Decl {
         this.colon_ = colon
         this.retTy_ = ty
         this.block_ = block
+        this.implicitParams_ = implicitParams
+        this.usingPos_ = usingPos
     }
     public init() {
     }
@@ -862,6 +866,8 @@ public class FuncDecl <: Decl {
     private var colon_ = Token()
     private var retTy_: Option<TypeNode> = None<TypeNode>
     private var block_: Block = Block()
+    private var implicitParams_: ArrayList<FuncParam> = ArrayList<FuncParam>()
+    private var usingPos_: Token = Token()
     var isEnumConstruct: Bool = false
     public mut prop overloadOp: Tokens {
         get() {
@@ -925,6 +931,22 @@ public class FuncDecl <: Decl {
             block_ = v
         }
     }
+    public mut prop implicitParams: ArrayList<FuncParam> {
+        get() {
+            implicitParams_
+        }
+        set(v) {
+            implicitParams_ = v
+        }
+    }
+    public mut prop usingPos: Token {
+        get() {
+            usingPos_
+        }
+        set(v) {
+            usingPos_ = v
+        }
+    }
 
     public func isConst(): Bool {
         for (modifier in modifiers) {
@@ -964,6 +986,11 @@ public class FuncDecl <: Decl {
         ret.append(paramTokens).append(lParen_)
         ret.append(funcParams.toTokens())
         ret.append(rParen_)
+        if (implicitParams_.size != 0) {
+            ret.append(usingPos_).append(lParen_)
+            ret.append(implicitParams_.toTokens())
+            ret.append(rParen_)
+        }
         match (retTy_) {
             case Some(v) => ret.append(colon_).append(v.toTokens())
             case None => ()
@@ -988,6 +1015,7 @@ public class FuncDecl <: Decl {
         }
         this.traverseCommonChild(v)
         traverseNodes(v, params_)
+        traverseNodes(v, implicitParams_)
         match (retTy_) {
             case Some(node) => node.traverse(v)
             case None => ()
@@ -1013,6 +1041,7 @@ public class FuncDecl <: Decl {
             }
         }
         ret += dumpNodes("-funcParams", funcParams, currentIndent)
+        ret += dumpNodes("-implicitParams", implicitParams_, currentIndent)
 
         match (retTy_) {
             case Some(v) =>
@@ -1315,12 +1344,15 @@ public class MacroDecl <: Decl {
 }
 
 public class PrimaryCtorDecl <: Decl {
-    init(decl: Decl, lParen: Token, params: ArrayList<FuncParam>, rParen: Token, block: Block) {
+    init(decl: Decl, lParen: Token, params: ArrayList<FuncParam>, rParen: Token, block: Block,
+        implicitParams: ArrayList<FuncParam>, usingPos: Token) {
         super(decl)
         this.lParen_ = lParen
         this.params_ = params
         this.rParen_ = rParen
         this.block_ = block
+        this.implicitParams_ = implicitParams
+        this.usingPos_ = usingPos
     }
     public init(inputs: Tokens) {
         try {
@@ -1352,6 +1384,8 @@ public class PrimaryCtorDecl <: Decl {
     private var rParen_: Token = Token(TokenKind.RPAREN)
     private var params_: ArrayList<FuncParam> = ArrayList<FuncParam>()
     private var block_: Block = Block()
+    private var implicitParams_: ArrayList<FuncParam> = ArrayList<FuncParam>()
+    private var usingPos_: Token = Token()
 
     public mut prop lParen: Token {
         get() {
@@ -1387,6 +1421,22 @@ public class PrimaryCtorDecl <: Decl {
             block_ = v
         }
     }
+    public mut prop implicitParams: ArrayList<FuncParam> {
+        get() {
+            implicitParams_
+        }
+        set(v) {
+            implicitParams_ = v
+        }
+    }
+    public mut prop usingPos: Token {
+        get() {
+            usingPos_
+        }
+        set(v) {
+            usingPos_ = v
+        }
+    }
 
     public func isConst(): Bool {
         for (modifier in modifiers) {
@@ -1401,6 +1451,12 @@ public class PrimaryCtorDecl <: Decl {
         var ret: Tokens = Tokens().append(super.toTokens()).append(lParen_)
         ret.append(funcParams.toTokens())
         ret.append(rParen_).append(block.toTokens())
+        if (implicitParams_.size != 0) {
+            ret.append(usingPos_).append(lParen_)
+            ret.append(implicitParams_.toTokens())
+            ret.append(rParen_)
+        }
+        ret.append(block.toTokens())
         return ret
     }
 
@@ -1412,6 +1468,7 @@ public class PrimaryCtorDecl <: Decl {
         }
         this.traverseCommonChild(v)
         traverseNodes(v, params_)
+        traverseNodes(v, implicitParams_)
         traverseNodes(v, genericConstraint)
         block_.traverse(v)
         return
@@ -1427,6 +1484,10 @@ public class PrimaryCtorDecl <: Decl {
         for (i in 0..funcParams.size) {
             ret += getIndent(currentIndent) + "-funcParams: ${i}, "
             ret += funcParams[i].dump(currentIndent)
+        }
+        for (i in 0..implicitParams_.size) {
+            ret += getIndent(currentIndent) + "-implicitParams: ${i}, "
+            ret += implicitParams_[i].dump(currentIndent)
         }
         ret += getIndent(currentIndent) + "-block: "
         ret += block_.dump(currentIndent)

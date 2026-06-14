@@ -268,7 +268,25 @@ func createFuncType(tyNode: NodeFormat_Type, nodeBase: NodeFormat_NodeBase): Typ
     var rParen: Token = Token(TokenKind.RPAREN).addPosition(funcType.GetRightParenPos())
     var arrow: Token = Token(TokenKind.ARROW).addPosition(funcType.GetArrowPos())
     var retTy: TypeNode = generateTypeAST(funcType.GetRetType())
-    return FuncType(typeName, colon, token, lParen, types, commas, rParen, arrow, retTy)
+    var usingType: Option<FuncTypeUsing> = match (funcType.GetUsingType()) {
+        case Some(ut) =>
+            var usingPos = Token().addPosition(ut.GetUsingPos())
+            var utLParen = Token(TokenKind.LPAREN).addPosition(ut.GetLeftParenPos())
+            var utTypes: ArrayList<TypeNode> = ArrayList<TypeNode>()
+            let utCommas = Tokens()
+            for (tp in ut.GetParamTypes()) {
+                utTypes.add(generateTypeAST(tp))
+                match (tp?.GetBase()?.GetCommaPos()) {
+                    case Some(position) where isValidPosition(position) => utCommas.append(
+                        Token(TokenKind.COMMA).addPosition(position))
+                    case _ => ()
+                }
+            }
+            var utRParen = Token(TokenKind.RPAREN).addPosition(ut.GetRightParenPos())
+            Some(FuncTypeUsing(usingPos, utLParen, utTypes, utCommas, utRParen))
+        case None => None<FuncTypeUsing>
+    }
+    return FuncType(typeName, colon, token, lParen, types, commas, rParen, arrow, retTy, usingType)
 }
 
 func createVArrayType(tyNode: NodeFormat_Type, nodeBase: NodeFormat_NodeBase): TypeNode {

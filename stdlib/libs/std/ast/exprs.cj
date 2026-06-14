@@ -2569,6 +2569,141 @@ public class SynchronizedExpr <: Expr {
     }
 }
 
+public class ImplicitWithExpr <: Expr {
+    public init(inputs: Tokens) {
+        try {
+            match (parseExpr(inputs) as ImplicitWithExpr) {
+                case Some(v) =>
+                    this.begin_ = v.beginPos
+                    this.end_ = v.endPos
+                    this.withPos_ = v.withPos_
+                    this.lParen_ = v.lParen_
+                    this.children_ = v.children_
+                    this.commas_ = v.commas_
+                    this.rParen_ = v.rParen_
+                    this.block_ = v.block_
+                case None => throw ASTException("Cannot construct the 'ImplicitWithExpr' node.")
+            }
+        } catch (e: ParseASTException) {
+            if (e.message == String.empty) {
+                throw ASTException("Cannot construct the 'ImplicitWithExpr' node.")
+            } else {
+                throw ASTException(e.message)
+            }
+        }
+    }
+    public init() {
+        super()
+    }
+    init(withPos: Token, lParen: Token, children: ArrayList<Expr>, commas: Tokens, rParen: Token, block: Block) {
+        withPos_ = withPos
+        lParen_ = lParen
+        children_ = children
+        commas_ = commas
+        rParen_ = rParen
+        block_ = block
+    }
+    private var withPos_: Token = Token(TokenKind.WITH)
+    private var lParen_: Token = Token(TokenKind.LPAREN)
+    private var children_: ArrayList<Expr> = ArrayList<Expr>()
+    private var commas_: Tokens = Tokens()
+    private var rParen_: Token = Token(TokenKind.RPAREN)
+    private var block_: Block = Block()
+    public mut prop withPos: Token {
+        get() {
+            withPos_
+        }
+        set(v) {
+            checkTokenType(v, WITH)
+            withPos_ = v
+        }
+    }
+    public mut prop lParen: Token {
+        get() {
+            lParen_
+        }
+        set(v) {
+            checkTokenType(v, LPAREN)
+            lParen_ = v
+        }
+    }
+    public mut prop children: ArrayList<Expr> {
+        get() {
+            children_
+        }
+        set(v) {
+            children_ = v
+        }
+    }
+    public mut prop commas: Tokens {
+        get() {
+            commas_
+        }
+        set(v) {
+            checkTokensType(v, COMMA)
+            commas_ = v
+        }
+    }
+    public mut prop rParen: Token {
+        get() {
+            rParen_
+        }
+        set(v) {
+            checkTokenType(v, RPAREN)
+            rParen_ = v
+        }
+    }
+    public mut prop block: Block {
+        get() {
+            block_
+        }
+        set(v) {
+            block_ = v
+        }
+    }
+    public func toTokens(): Tokens {
+        var ret = Tokens().append(withPos_).append(lParen_)
+        if (!children_.isEmpty()) {
+            for (i in 0..children_.size - 1) {
+                let comma = commas_.tryGet(i) ?? Token(TokenKind.COMMA)
+                ret.append(children_[i].toTokens()).append(comma)
+            }
+            ret.append(children_[children_.size - 1].toTokens())
+        }
+        ret.append(rParen_).append(block_)
+        ret
+    }
+
+    public func traverse(v: Visitor): Unit {
+        v.visit(this)
+        super.traverse(v)
+        if (v.needBreakTraverse()) {
+            return
+        }
+        for (child in children_) {
+            child.traverse(v)
+        }
+        block_.traverse(v)
+        return
+    }
+
+    protected func dump(indent: UInt16): String {
+        var ret: String = "ImplicitWithExpr {\n"
+        currentIndent = indent
+        if (indent != 0 || beginNode) {
+            currentIndent++
+        }
+        for (i in 0..children_.size) {
+            ret += getIndent(currentIndent) + "-children: ${i}, "
+            ret += children_[i].dump(currentIndent)
+        }
+        ret += getIndent(currentIndent) + "-block: "
+        ret += block_.dump(currentIndent)
+        ret += getIndent(indent) + "}\n"
+        ret
+    }
+}
+
 public class TrailingClosureExpr <: Expr {
     public init(inputs: Tokens) {
         try {

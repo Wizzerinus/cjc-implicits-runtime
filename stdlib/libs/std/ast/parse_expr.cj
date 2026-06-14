@@ -92,6 +92,7 @@ func generateExprAST(exprNode: Option<NodeFormat_Expr>): Expr {
         case "for_in_expr" => createForInExpr(expr)
         case "type_conv_expr" => createTypeConvExpr(expr)
         case "synchronized_expr" => createSynchronizedExpr(expr)
+        case "implicit_with_expr" => createImplicitWithExpr(expr)
         case "spawn_expr" => createSpawnExpr(expr)
         case "do_while_expr" => createDoWhileExpr(expr)
         case "throw_expr" => createThrowExpr(expr)
@@ -590,6 +591,26 @@ func createSynchronizedExpr(expr: NodeFormat_Expr): Expr {
     return SynchronizedExpr(keyWord, lParen, mutex, rParen, block)
 }
 
+func createImplicitWithExpr(expr: NodeFormat_Expr): Expr {
+    var iwExpr = match (expr.GetExprAsImplicitWithExpr()) {
+        case Some(v) => v
+        case None => throw ParseASTException()
+    }
+    var withPos = Token(TokenKind.WITH).addPosition(iwExpr.GetWithPos())
+    var lParen = Token(TokenKind.LPAREN).addPosition(iwExpr.GetLeftParenPos())
+    var children: ArrayList<Expr> = ArrayList<Expr>()
+    for (child in iwExpr.GetChildren()) {
+        children.add(generateExprAST(child))
+    }
+    var commas = Tokens()
+    for (pos in iwExpr.GetCommaPosVec()) {
+        commas.append(Token(COMMA).addPosition(pos))
+    }
+    var rParen = Token(TokenKind.RPAREN).addPosition(iwExpr.GetRightParenPos())
+    var block = generateBlock(iwExpr.GetBody())
+    return ImplicitWithExpr(withPos, lParen, children, commas, rParen, block)
+}
+
 func createTrailingClosureExpr(expr: NodeFormat_Expr): Expr {
     var trailExpr = match (expr.GetExprAsTrailingClosureExpr()) {
         case Some(v) => v
@@ -848,7 +869,7 @@ func createQuoteToken(expr: NodeFormat_Expr): Expr {
     var tks = Tokens()
     for (tk in tkp.GetTokens()) {
         match (tk) {
-            case Some(v) => 
+            case Some(v) =>
                 let isSingle = v.GetIsSingleQuote()
                 var tokenKind = getTokenKind(v.GetKind())
                 if (tokenKind == STRING_LITERAL && isSingle == true) {
