@@ -8,5 +8,9 @@
 
 package std.core
 
-public struct Throws<T> {}
+@ConstSafe
+public struct Throws<T> {
+  @Frozen
+  public const init() {}
+}
 

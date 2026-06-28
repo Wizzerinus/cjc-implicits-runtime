@@ -14,7 +14,7 @@ package std.core
  * and the underlying OS thread cannot be preempted by other cangjie threads.
  * After @param fn returns, it will switch back to the cangjie thread stack,
  * and the preemption will be permitted.
- * 
+ *
  * @param fn The function to be executed exclusively.
  * @return The return value of @param fn.
  * @throws ExclusiveScopeException if an exception occurs during execution.
@@ -36,13 +36,13 @@ private enum Result<T> {
     | Err(Error)
 }
 
-@Intrinsic 
+@Intrinsic
 func exclusiveScopeImpl<T>(executeClosure: (() -> T) -> T, fn: () -> T): T
 
 private class ExclusiveScope<T> {
     var result: Result<T> = unsafe { zeroValue<Result<T>>() }
     func run(fn: () -> T): Unit {
-        /*exclusiveScopeImpl(Future<Unit>.executeClosure) {
+        exclusiveScopeImpl(Future<Unit>.executeClosure) {
             try {
                 result = Val(fn())
             } catch (e: Exception) {
@@ -50,7 +50,7 @@ private class ExclusiveScope<T> {
             } catch (e: Error) {
                 result = Err(e)
             }
-        }*/
+        }
     }
 }
 
